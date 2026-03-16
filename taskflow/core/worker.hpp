@@ -73,12 +73,20 @@ class Worker {
   @brief queries the size of the queue (i.e., number of enqueued tasks to
          run) associated with the worker
   */
-  inline size_t queue_size() const { return _wsq.size(); }
-  
+  inline size_t queue_size() const {
+    size_t total = 0;
+    for(size_t p = 0; p < static_cast<size_t>(TaskPriority::LOW); ++p) {
+      total += _wsq[p].size();
+    }
+    return total;
+  }
+
   /**
   @brief queries the current capacity of the queue
   */
-  inline size_t queue_capacity() const { return static_cast<size_t>(_wsq.capacity()); }
+  inline size_t queue_capacity() const {
+    return static_cast<size_t>(_wsq[0].capacity());
+  }
 
   /**
   @brief acquires the associated thread
@@ -86,19 +94,19 @@ class Worker {
   std::thread& thread() { return _thread; }
 
   private:
-  
-  std::atomic_flag _done = ATOMIC_FLAG_INIT; 
+
+  std::atomic_flag _done = ATOMIC_FLAG_INIT;
 
   size_t _id;
   size_t _sticky_victim;
-  
-  Xorshift<uint32_t> _rdgen; 
-  
+
+  Xorshift<uint32_t> _rdgen;
+
   std::thread _thread;
 
   //std::default_random_engine _rdgen;
 
-  BoundedWSQ<Node*> _wsq;
+  std::array<BoundedWSQ<Node*>, static_cast<size_t>(TaskPriority::LOW)> _wsq;
 };
 
 // ----------------------------------------------------------------------------
@@ -108,7 +116,7 @@ class Worker {
 /**
 @class WorkerView
 
-@brief class to create an immutable view of a worker 
+@brief class to create an immutable view of a worker
 
 An executor keeps a set of internal worker threads to run tasks.
 A worker view provides users an immutable interface to observe
@@ -161,12 +169,12 @@ inline size_t WorkerView::id() const {
 
 // Function: queue_size
 inline size_t WorkerView::queue_size() const {
-  return _worker._wsq.size();
+  return _worker.queue_size();
 }
 
 // Function: queue_capacity
 inline size_t WorkerView::queue_capacity() const {
-  return static_cast<size_t>(_worker._wsq.capacity());
+  return _worker.queue_capacity();
 }
 
 // ----------------------------------------------------------------------------
@@ -178,8 +186,8 @@ inline size_t WorkerView::queue_capacity() const {
 
 @brief class to configure worker behavior in an executor
 
-The tf::WorkerInterface class allows users to customize worker properties when creating an executor. 
-Examples include binding workers to specific CPU cores or 
+The tf::WorkerInterface class allows users to customize worker properties when creating an executor.
+Examples include binding workers to specific CPU cores or
 invoking custom methods before and after a worker enters or leaves the work-stealing loop.
 When you create an executor, it spawns a set of workers to execute tasks
 with the following logic:
@@ -191,7 +199,7 @@ for(size_t n=0; n<num_workers; n++) {
     // enter the scheduling loop
     // Here, WorkerInterface::scheduler_prologue is invoked, if any
     worker_interface->scheduler_prologue(worker);
-    
+
     try {
       while(1) {
         perform_work_stealing_algorithm();
@@ -226,11 +234,11 @@ bool affine(std::thread& thread, unsigned int core_id) {
 class CustomWorkerBehavior : public tf::WorkerInterface {
 
   public:
-  
+
   // to call before the worker enters the scheduling loop
   void scheduler_prologue(tf::Worker& w) override {
     printf("worker %lu prepares to enter the work-stealing loop\n", w.id());
-    
+
     // now affine the worker to a particular CPU core equal to its id
     if(affine(w.thread(), w.id())) {
       printf("successfully affines worker %lu to CPU core %lu\n", w.id(), w.id());
@@ -270,14 +278,14 @@ worker 2 left the work-stealing loop
 @endcode
 
 @attention
-tf::WorkerInterface::scheduler_prologue and tf::WorkerInterface::scheduler_epologue 
+tf::WorkerInterface::scheduler_prologue and tf::WorkerInterface::scheduler_epologue
 are invoked by each worker simultaneously.
 
 */
 class WorkerInterface {
 
   public:
-  
+
   /**
   @brief default destructor
   */
@@ -322,8 +330,8 @@ std::unique_ptr<T> make_worker_interface(ArgsT&&... args) {
 }
 
 
-                                                                                 
-                                                                                 
-}  // end of namespact tf ------------------------------------------------------  
+
+
+}  // end of namespact tf ------------------------------------------------------
 
 

@@ -4,7 +4,7 @@
 #include <taskflow/taskflow.hpp>
 
 TEST_CASE("SimplePriority.Sequential" * doctest::timeout(300)) {
-  
+
   tf::Executor executor(1);
   tf::Taskflow taskflow;
 
@@ -18,9 +18,9 @@ TEST_CASE("SimplePriority.Sequential" * doctest::timeout(300)) {
     [&] () { }
   );
 
-  A.precede(B, C, D); 
+  A.precede(B, C, D);
   E.succeed(B, C, D);
-  
+
   REQUIRE(B.priority() == tf::TaskPriority::HIGH);
   REQUIRE(C.priority() == tf::TaskPriority::HIGH);
   REQUIRE(D.priority() == tf::TaskPriority::HIGH);
@@ -37,11 +37,11 @@ TEST_CASE("SimplePriority.Sequential" * doctest::timeout(300)) {
 }
 
 TEST_CASE("RandomPriority.Sequential" * doctest::timeout(300)) {
-  
+
   tf::Executor executor(1);
   tf::Taskflow taskflow;
 
-  const auto MAX_P = static_cast<unsigned>(tf::TaskPriority::MAX);
+  const auto MAX_P = static_cast<unsigned>(tf::TaskPriority::LOW);
 
   auto beg = taskflow.emplace([](){});
   auto end = taskflow.emplace([](){});
@@ -72,11 +72,11 @@ TEST_CASE("RandomPriority.Sequential" * doctest::timeout(300)) {
 }
 
 TEST_CASE("RandomPriority.Parallel" * doctest::timeout(300)) {
-  
+
   tf::Executor executor;
   tf::Taskflow taskflow;
 
-  const auto MAX_P = static_cast<unsigned>(tf::TaskPriority::MAX);
+  const auto MAX_P = static_cast<unsigned>(tf::TaskPriority::LOW);
 
   auto beg = taskflow.emplace([](){});
   auto end = taskflow.emplace([](){});

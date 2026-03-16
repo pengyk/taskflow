@@ -195,11 +195,11 @@ constexpr bool is_multi_condition_task_v = std::is_invocable_r_v<SmallVector<int
 
 @brief class to create a task handle over a taskflow node
 
-A task points to a node in a taskflow graph and provides a set of methods for users to access and modify 
+A task points to a node in a taskflow graph and provides a set of methods for users to access and modify
 attributes of the associated node,
 such as dependencies, callable, names, and so on.
-A task is a very lightweight object (i.e., it only stores a node pointer) and can be trivially 
-copied around. 
+A task is a very lightweight object (i.e., it only stores a node pointer) and can be trivially
+copied around.
 
 @code{.cpp}
 // create two tasks with one dependency
@@ -229,7 +229,7 @@ tf::Task task4 = taskflow.emplace([](tf::Subflow& sf){
 tf::Task task5 = taskflow.composed_of(taskflow2).name("module task");
 @endcode
 
-A tf::Task is polymorphic. 
+A tf::Task is polymorphic.
 Once created, you can assign a different task type to it using tf::Task::work.
 For example, the code below creates a static task and then reworks it to a subflow task:
 
@@ -243,7 +243,7 @@ task.work([](tf::Subflow& sf){
 
 @attention
 tf::Task does not own the lifetime of the associated node.
-Accessing the attributes of the associated node after the taskflow has been destroyed 
+Accessing the attributes of the associated node after the taskflow has been destroyed
 can result in undefined behavior.
 
 */
@@ -334,7 +334,7 @@ class Task {
   @brief queries the name of the task
 
   @return the name of the task as a constant string reference
-  
+
   @code{.cpp}
   tf::Task task = taskflow.emplace([](){});
   task.name("MyTask");
@@ -347,7 +347,7 @@ class Task {
   @brief queries the number of successors of the task
 
   @return the number of successor tasks.
-  
+
   @code{.cpp}
   tf::Task A = taskflow.emplace([](){});
   tf::Task B = taskflow.emplace([](){});
@@ -361,7 +361,7 @@ class Task {
   @brief queries the number of predecessors of the task
 
   @return the number of predecessor tasks
-  
+
   @code{.cpp}
   tf::Task A = taskflow.emplace([](){});
   tf::Task B = taskflow.emplace([](){});
@@ -379,7 +379,7 @@ class Task {
   A strong dependency is a preceding link from one non-condition task to another task.
   For instance, task `cond` below has one strong dependency, while tasks `yes` and `no`
   each have one weak dependency.
-  
+
   @code{.cpp}
   auto [init, cond, yes, no] = taskflow.emplace(
    [] () { },
@@ -393,7 +393,7 @@ class Task {
   @endcode
 
   @dotfile images/conditional-tasking-if-else.dot
-  
+
   @note
   To understand how %Taskflow schedule tasks under strong and weak dependencies,
   please refer to @ref ConditionalTasking.
@@ -422,7 +422,7 @@ class Task {
   @endcode
 
   @dotfile images/conditional-tasking-if-else.dot
-  
+
   @note
   To understand how %Taskflow schedule tasks under strong and weak dependencies,
   please refer to @ref ConditionalTasking.
@@ -432,7 +432,7 @@ class Task {
   /**
   @brief assigns a name to the task
 
-  @param name a @std_string 
+  @param name a @std_string
 
   @return @c *this
 
@@ -452,11 +452,11 @@ class Task {
 
   @return @c *this
 
-  A tf::Task is polymorphic. 
-  Once created, you can reassign it to a different callable of a different task type 
+  A tf::Task is polymorphic.
+  Once created, you can reassign it to a different callable of a different task type
   using tf::Task::work.
   For example, the code below creates a static task and reworks it to a subflow task:
-  
+
   @code{.cpp}
   tf::Task task = taskflow.emplace([](){}).name("static task");
   task.work([](tf::Subflow& sf){
@@ -477,7 +477,7 @@ class Task {
   @return @c *this
 
   The example below creates a module task from a taskflow:
-  
+
   @code{.cpp}
   task.composed_of(taskflow);
   @endcode
@@ -518,7 +518,7 @@ class Task {
   @param tasks one or multiple tasks
 
   @return @c *this
-  
+
   The example below creates a taskflow of two tasks, where `task1` runs before `task2`.
 
   @code{.cpp}
@@ -531,7 +531,7 @@ class Task {
   */
   template <typename... Ts>
   Task& succeed(Ts&&... tasks);
-	
+
   /**
   @brief removes predecessor links from other tasks to this
 
@@ -544,7 +544,7 @@ class Task {
   This method removes the dependency links where the given tasks are predecessors
   of this task (i.e., tasks -> this). It ensures both sides of the dependency
   are updated to maintain graph consistency.
-  
+
   @code{.cpp}
   tf::Task A = taskflow.emplace([](){});
   tf::Task B = taskflow.emplace([](){});
@@ -594,15 +594,15 @@ class Task {
 
   /**
   @brief makes the task release the given semaphore
-  
+
   @note
   To know more about tf::Semaphore, please refer to @ref LimitTheMaximumConcurrency.
   */
   Task& release(Semaphore& semaphore);
-  
+
   /**
   @brief makes the task release the given range of semaphores
-  
+
   @note
   To know more about tf::Semaphore, please refer to @ref LimitTheMaximumConcurrency.
   */
@@ -611,7 +611,7 @@ class Task {
 
   /**
   @brief makes the task acquire the given semaphore
-  
+
   @note
   To know more about tf::Semaphore, please refer to @ref LimitTheMaximumConcurrency.
   */
@@ -619,7 +619,7 @@ class Task {
 
   /**
   @brief makes the task acquire the given range of semaphores
-  
+
   @note
   To know more about tf::Semaphore, please refer to @ref LimitTheMaximumConcurrency.
   */
@@ -632,13 +632,13 @@ class Task {
   @param data pointer to user data
   @return @c *this
 
-  The following example shows how to attach a user data to a task and retrieve it 
+  The following example shows how to attach a user data to a task and retrieve it
   during the execution of the task.
 
   @code{.cpp}
   tf::Executor executor;
   tf::Taskflow taskflow("attach data to a task");
-  
+
   int data;  // user data
 
   // create a task and attach it a user data
@@ -656,7 +656,44 @@ class Task {
 
   */
   Task& data(void* data);
-  
+
+  /**
+  @brief assigns a priority level to the task
+
+  @param p the priority level (tf::TaskPriority::HIGH, tf::TaskPriority::NORMAL, or tf::TaskPriority::LOW)
+  @return @c *this
+
+  A task with a higher priority (lower numerical value) will be executed
+  before tasks with lower priority (higher numerical value) when they are
+  both ready to run.
+
+  @code{.cpp}
+  tf::Taskflow taskflow;
+  auto [A, B, C] = taskflow.emplace(
+    [](){},
+    [](){},
+    [](){}
+  );
+  A.priority(tf::TaskPriority::HIGH);
+  B.priority(tf::TaskPriority::NORMAL);
+  C.priority(tf::TaskPriority::LOW);
+  @endcode
+  */
+  Task& priority(TaskPriority p);
+
+  /**
+  @brief queries the priority level of the task
+
+  @return the priority level of the task
+
+  @code{.cpp}
+  tf::Task task = taskflow.emplace([](){});
+  task.priority(tf::TaskPriority::HIGH);
+  assert(task.priority() == tf::TaskPriority::HIGH);
+  @endcode
+  */
+  TaskPriority priority() const;
+
   /**
   @brief resets the task handle to null
 
@@ -709,13 +746,13 @@ class Task {
 
   /**
   @brief applies an visitor callable to each successor of the task
-  
+
   @tparam V a callable type (function, lambda, etc.) that accepts a tf::Task handle
   @param visitor visitor to apply to each subflow task
 
   This method allows you to traverse and inspect successor tasks of this task.
   For instance, the code below iterates the two successors (`task2` and `task3`) of `task1`.
-  
+
   @code{.cpp}
   auto [task1, task2, task3] = taskflow.emplace(
     [](){ std::cout << "task 1\n"; },
@@ -734,13 +771,13 @@ class Task {
 
   /**
   @brief applies an visitor callable to each predecessor of the task
-  
+
   @tparam V a callable type (function, lambda, etc.) that accepts a tf::Task handle
   @param visitor visitor to apply to each predecessor task
 
   This method allows you to traverse and inspect predecessor tasks of this task.
   For instance, the code below iterates the two predecessors (`task2` and `task3`) of `task1`.
-  
+
   @code{.cpp}
   auto [task1, task2, task3] = taskflow.emplace(
     [](){ std::cout << "task 1\n"; },
@@ -796,7 +833,7 @@ class Task {
   /**
   @brief returns the task type
 
-  A task can be one of the types defined in tf::TaskType and can be printed in 
+  A task can be one of the types defined in tf::TaskType and can be printed in
   a human-readable form using tf::to_string.
 
   @code{.cpp}
@@ -822,14 +859,14 @@ class Task {
   @brief queries pointer to user data
 
   @return C-styled pointer to the attached user data by tf::Task::data(void* data)
-  
-  The following example shows how to attach a user data to a task and retrieve it 
+
+  The following example shows how to attach a user data to a task and retrieve it
   during the execution of the task.
 
   @code{.cpp}
   tf::Executor executor;
   tf::Taskflow taskflow("attach data to a task");
-  
+
   int data;  // user data
 
   // create a task and attach it a user data
@@ -849,46 +886,46 @@ class Task {
 
   /**
   @brief retrieves the exception pointer of this task
-  
-  This method retrieves the exception pointer of this task 
+
+  This method retrieves the exception pointer of this task
   that are silently caught by the executor, if any.
-  When multiple tasks throw exceptions concurrently, only one exception will be propagated, 
+  When multiple tasks throw exceptions concurrently, only one exception will be propagated,
   while the others are silently caught and stored within their respective tasks.
-  For example, in the code below, both tasks `B` and `C` throw exceptions. 
-  However, only one of them will be propagated to the try-catch block, 
+  For example, in the code below, both tasks `B` and `C` throw exceptions.
+  However, only one of them will be propagated to the try-catch block,
   while the other will be silently caught and stored within its respective task.
-  
+
   @code{.cpp}
-  tf::Executor executor(2); 
+  tf::Executor executor(2);
   tf::Taskflow taskflow;
   std::atomic<size_t> arrivals(0);
-  
+
   auto [B, C] = taskflow.emplace(
-    [&]() { 
+    [&]() {
       // wait for two threads to arrive so we avoid premature cancellation
       ++arrivals; while(arrivals != 2);
-      throw std::runtime_error("oops"); 
+      throw std::runtime_error("oops");
     },
-    [&]() { 
+    [&]() {
       // wait for two threads to arrive so we avoid premature cancellation
       ++arrivals; while(arrivals != 2);
-      throw std::runtime_error("oops"); 
+      throw std::runtime_error("oops");
     }
   );
-  
+
   try {
     executor.run(taskflow).get();
   }
   catch (const std::runtime_error& e) {
     std::cerr << e.what();
   }
-  
+
   // exactly one holds an exception as another was propagated to the try-catch block
   assert((B.exception_ptr() != nullptr) != (C.exception_ptr() != nullptr));
   @endcode
   */
   std::exception_ptr exception_ptr() const;
-  
+
   /**
   @brief queries if the task has an exception pointer
 
@@ -1173,6 +1210,17 @@ inline Task& Task::data(void* data) {
   return *this;
 }
 
+// Function: priority
+inline TaskPriority Task::priority() const {
+  return _node->_priority;
+}
+
+// Function: priority
+inline Task& Task::priority(TaskPriority p) {
+  _node->_priority = p;
+  return *this;
+}
+
 // ----------------------------------------------------------------------------
 // global ostream
 // ----------------------------------------------------------------------------
@@ -1227,7 +1275,7 @@ class TaskView {
 
   /**
   @brief applies an visitor callable to each successor of the task
-  
+
   @tparam V a callable type (function, lambda, etc.) that accepts a tf::Task handle
   @param visitor visitor to apply to each subflow task
 
@@ -1238,7 +1286,7 @@ class TaskView {
 
   /**
   @brief applies an visitor callable to each predecessor of the task
-  
+
   @tparam V a callable type (function, lambda, etc.) that accepts a tf::Task handle
   @param visitor visitor to apply to each predecessor task
 

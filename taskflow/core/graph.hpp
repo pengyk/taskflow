@@ -93,12 +93,12 @@ class Graph {
   @brief returns the number of nodes in the graph
   */
   size_t size() const;
-  
+
   /**
   @brief queries the emptiness of the graph
   */
   bool empty() const;
-  
+
   /**
   @brief returns an iterator to the first node of this graph
   */
@@ -113,7 +113,7 @@ class Graph {
   @brief returns an iterator to the first node of this graph
   */
   auto begin() const;
-  
+
   /**
   @brief returns an iterator past the last element of this graph
   */
@@ -124,12 +124,34 @@ class Graph {
   std::vector<Node*> _nodes;
 
   void _erase(Node*);
-  
+
   /**
   @private
   */
   template <typename ...ArgsT>
   Node* _emplace_back(ArgsT&&...);
+};
+
+// ----------------------------------------------------------------------------
+// TaskPriority
+// ----------------------------------------------------------------------------
+
+/**
+@enum TaskPriority
+
+@brief enumeration of all task priority levels
+
+A priority level determines the order in which a task is picked up by a worker
+when tasks are ready to execute. Tasks with higher priority (lower numerical value)
+are executed before tasks with lower priority (higher numerical value).
+*/
+enum class TaskPriority : unsigned {
+  /** @brief the highest task priority level (most urgent) */
+  HIGH = 0,
+  /** @brief the normal task priority level */
+  NORMAL = 1,
+  /** @brief the lowest task priority level (least urgent) */
+  LOW = 2,
 };
 
 // ----------------------------------------------------------------------------
@@ -139,7 +161,7 @@ class Graph {
 /**
 @class TaskParams
 
-@brief class to create a task parameter object 
+@brief class to create a task parameter object
 
 tf::TaskParams is primarily used by asynchronous tasking.
 */
@@ -156,6 +178,11 @@ class TaskParams {
   @brief C-styled pointer to user data
   */
   void* data {nullptr};
+
+  /**
+  @brief priority level of the task (default: TaskPriority::NORMAL)
+  */
+  TaskPriority priority {TaskPriority::NORMAL};
 };
 
 /**
@@ -202,26 +229,26 @@ class NodeBase {
   friend class ExplicitAnchorGuard;
   friend class TaskGroup;
   friend class Algorithm;
-  
+
   protected:
-  
+
   nstate_t _nstate              {NSTATE::NONE};
   std::atomic<estate_t> _estate {ESTATE::NONE};
 
   NodeBase* _parent {nullptr};
   std::atomic<size_t> _join_counter {0};
-  
+
   std::exception_ptr _exception_ptr {nullptr};
 
   NodeBase() = default;
 
   NodeBase(nstate_t nstate, estate_t estate, NodeBase* parent, size_t join_counter) :
-    _nstate {nstate}, 
+    _nstate {nstate},
     _estate {estate},
     _parent {parent},
     _join_counter {join_counter} {
   }
-  
+
   void _rethrow_exception() {
     if(_exception_ptr) {
       auto e = _exception_ptr;
@@ -274,9 +301,9 @@ class Node : public NodeBase {
 
     std::function<void(tf::Runtime&)> work;
   };
-  
+
   struct NonpreemptiveRuntime {
-    
+
     template <typename C>
     NonpreemptiveRuntime(C&&);
 
@@ -298,7 +325,7 @@ class Node : public NodeBase {
 
     template <typename C>
     Condition(C&&);
-    
+
     std::function<int()> work;
   };
 
@@ -327,24 +354,24 @@ class Node : public NodeBase {
     Async(T&&);
 
     std::variant<
-      std::function<void()>, 
+      std::function<void()>,
       std::function<void(tf::Runtime&)>,       // silent async
       std::function<void(tf::Runtime&, bool)>  // async
     > work;
   };
-  
+
   // silent dependent async
   struct DependentAsync {
-    
+
     template <typename C>
     DependentAsync(C&&);
-    
+
     std::variant<
-      std::function<void()>, 
+      std::function<void()>,
       std::function<void(tf::Runtime&)>,       // silent async
       std::function<void(tf::Runtime&, bool)>  // async
     > work;
-   
+
     std::atomic<size_t> use_count {1};
   };
 
@@ -381,10 +408,10 @@ class Node : public NodeBase {
   constexpr static auto DEPENDENT_ASYNC       = get_index_v<DependentAsync, handle_t>;
 
   Node() = default;
-  
+
   template <typename... Args>
   Node(nstate_t, estate_t, const TaskParams&, Topology*, NodeBase*, size_t, Args&&...);
-  
+
   template <typename... Args>
   Node(nstate_t, estate_t, const DefaultTaskParams&, Topology*, NodeBase*, size_t, Args&&...);
 
@@ -396,20 +423,22 @@ class Node : public NodeBase {
   const std::string& name() const;
 
   private:
-  
+
   std::string _name;
-  
+
   void* _data {nullptr};
-  
+
+  TaskPriority _priority {TaskPriority::NORMAL};
+
   Topology* _topology {nullptr};
 
   size_t _num_successors {0};
   SmallVector<Node*, 4> _edges;
 
   handle_t _handle;
-  
+
   std::unique_ptr<Semaphores> _semaphores;
-  
+
   bool _is_parent_cancelled() const;
   bool _is_conditioner() const;
   bool _acquire_all(SmallVector<Node*>&);
@@ -496,7 +525,7 @@ Node::Subflow::Subflow(C&& c) : work {std::forward<C>(c)} {
 // Constructor
 template <typename C>
 Node::Condition::Condition(C&& c) : work {std::forward<C>(c)} {
-}                                        
+}
 
 // ----------------------------------------------------------------------------
 // Definition for Node::MultiCondition
@@ -544,14 +573,15 @@ Node::Node(
   nstate_t nstate,
   estate_t estate,
   const TaskParams& params,
-  Topology* topology, 
-  NodeBase* parent, 
+  Topology* topology,
+  NodeBase* parent,
   size_t join_counter,
   Args&&... args
 ) :
   NodeBase(nstate, estate, parent, join_counter),
   _name     {params.name},
   _data     {params.data},
+  _priority {params.priority},
   _topology {topology},
   _handle   {std::forward<Args>(args)...} {
 }
@@ -562,8 +592,8 @@ Node::Node(
   nstate_t nstate,
   estate_t estate,
   const DefaultTaskParams&,
-  Topology* topology, 
-  NodeBase* parent, 
+  Topology* topology,
+  NodeBase* parent,
   size_t join_counter,
   Args&&... args
 ) :
@@ -578,12 +608,12 @@ u successor   layout: s1, s2, s3, p1, p2 (num_successors = 3)
 v predecessor layout: s1, p1, p2
 
 add a new successor: u->v
-u successor   layout: 
+u successor   layout:
   s1, s2, s3, p1, p2, v (push_back v)
   s1, s2, s3, v, p2, p1 (swap adj[num_successors] with adj[n-1])
-v predecessor layout: 
+v predecessor layout:
   s1, p1, p2, u         (push_back u)
-*/ 
+*/
 inline void Node::_precede(Node* v) {
   _edges.push_back(v);
   std::swap(_edges[_num_successors++], _edges[_edges.size() - 1]);
@@ -601,7 +631,7 @@ inline void Node::_remove_successors(Node* node) {
 
 // Function: _remove_predecessors
 inline void Node::_remove_predecessors(Node* node) {
-  _edges.erase( 
+  _edges.erase(
     std::remove(_edges.begin() + _num_successors, _edges.end(), node), _edges.end()
   );
 }
@@ -628,7 +658,7 @@ inline size_t Node::num_weak_dependencies() const {
 // Function: _root_join_counter
 // not supposed to be called by async task
 TF_FORCE_INLINE std::atomic<size_t>& Node::_root_join_counter() {
-  return (_parent) ? _parent->_join_counter : _topology->_join_counter; 
+  return (_parent) ? _parent->_join_counter : _topology->_join_counter;
 }
 
 // Function: num_strong_dependencies
@@ -653,7 +683,7 @@ inline bool Node::_is_conditioner() const {
 
 // Function: _is_parent_cancelled
 inline bool Node::_is_parent_cancelled() const {
-  return (_topology && (_topology->_estate.load(std::memory_order_relaxed) & (ESTATE::CANCELLED | ESTATE::EXCEPTION))) 
+  return (_topology && (_topology->_estate.load(std::memory_order_relaxed) & (ESTATE::CANCELLED | ESTATE::EXCEPTION)))
          ||
          (_parent && (_parent->_estate.load(std::memory_order_relaxed) & (ESTATE::CANCELLED | ESTATE::EXCEPTION)));
 }
@@ -707,17 +737,17 @@ inline void Node::_release_all(SmallVector<Node*>& nodes) {
 class ExplicitAnchorGuard {
 
   public:
-  
-  // Explicit anchor must sit in estate as it may be accessed by multiple threads 
+
+  // Explicit anchor must sit in estate as it may be accessed by multiple threads
   // (e.g., corun's parent with tear_down_async's parent).
-  ExplicitAnchorGuard(NodeBase* node_base) : _node_base{node_base} { 
+  ExplicitAnchorGuard(NodeBase* node_base) : _node_base{node_base} {
     _node_base->_estate.fetch_or(ESTATE::EXPLICITLY_ANCHORED, std::memory_order_relaxed);
   }
 
   ~ExplicitAnchorGuard() {
     _node_base->_estate.fetch_and(~ESTATE::EXPLICITLY_ANCHORED, std::memory_order_relaxed);
   }
-  
+
   private:
 
   NodeBase* _node_base;
@@ -790,12 +820,12 @@ inline void Graph::_erase(Node* node) {
   //  end()
   //);
   _nodes.erase(
-    std::remove_if(_nodes.begin(), _nodes.end(), [&](auto& p){ 
+    std::remove_if(_nodes.begin(), _nodes.end(), [&](auto& p){
       if(p == node) {
         recycle(p);
         return true;
       }
-      return false; 
+      return false;
     }),
     _nodes.end()
   );
